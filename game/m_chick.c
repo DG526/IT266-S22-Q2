@@ -625,12 +625,13 @@ void chick_sight(edict_t *self, edict_t *other)
 */
 void SP_monster_chick (edict_t *self)
 {
+	/* Commented original code:
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);
 		return;
 	}
-
+	*/
 	sound_missile_prelaunch	= gi.soundindex ("chick/chkatck1.wav");	
 	sound_missile_launch	= gi.soundindex ("chick/chkatck2.wav");	
 	sound_melee_swing		= gi.soundindex ("chick/chkatck3.wav");	
@@ -652,11 +653,30 @@ void SP_monster_chick (edict_t *self)
 	self->s.modelindex = gi.modelindex ("models/monsters/bitch/tris.md2");
 	VectorSet (self->mins, -16, -16, 0);
 	VectorSet (self->maxs, 16, 16, 56);
-
+	/*Commented original code:
 	self->health = 175;
 	self->gib_health = -70;
-	self->mass = 200;
+	*/
 
+	//David begin
+	self->gib_health = 0;
+
+	self->lvlFire = 0;
+	self->lvlIce = 1;
+	self->lvlLightning = 1;
+	self->lvlDark = 1;
+	self->lvlExplosion = 2;
+
+	self->monsterinfo.probPool = 13;
+	self->monsterinfo.probFire = 0;
+	self->monsterinfo.probIce = 5;
+	self->monsterinfo.probLtng = 5;
+	self->monsterinfo.probDark = 2;
+	self->monsterinfo.probExplsn = 1;
+	//David end
+
+	self->mass = 200;
+	
 	self->pain = chick_pain;
 	self->die = chick_die;
 
@@ -673,5 +693,51 @@ void SP_monster_chick (edict_t *self)
 	self->monsterinfo.currentmove = &chick_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	walkmonster_start (self);
+	//walkmonster_start (self); Commented Original code
+}
+void set_chick_level(edict_t* self, int level) {
+	switch (level) {
+	case 1:
+		self->lvlFire = 0;
+		self->lvlIce = 1;
+		self->lvlLightning = 1;
+		self->lvlDark = 1;
+		self->lvlExplosion = 2;
+		break;
+	case 2:
+		self->lvlFire = 0;
+		self->lvlIce = 1;
+		self->lvlLightning = 2;
+		self->lvlDark = 2;
+		self->lvlExplosion = 2;
+		break;
+	case 3:
+		self->lvlFire = 0;
+		self->lvlIce = 2;
+		self->lvlLightning = 2;
+		self->lvlDark = 2;
+		self->lvlExplosion = 3;
+		break;
+	case 4:
+		self->lvlFire = 0;
+		self->lvlIce = 2;
+		self->lvlLightning = 2;
+		self->lvlDark = 3;
+		self->lvlExplosion = 3;
+		break;
+	case 5:
+		self->lvlFire = 0;
+		self->lvlIce = 3;
+		self->lvlLightning = 3;
+		self->lvlDark = 4;
+		self->lvlExplosion = 5;
+		break;
+	case 6:
+		self->lvlFire = 0;
+		self->lvlIce = 3;
+		self->lvlLightning = 3;
+		self->lvlDark = 4;
+		self->lvlExplosion = 5;
+		break;
+	}
 }

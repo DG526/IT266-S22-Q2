@@ -899,6 +899,22 @@ void Cmd_PlayerList_f(edict_t *ent)
 	gi.cprintf(ent, PRINT_HIGH, "%s", text);
 }
 
+//David Begin
+extern void SpawnFoe(edict_t* self, int difficulty);
+void NewFoe_wk(edict_t* ent)
+{
+	SpawnFoe(ent, 1);
+}
+void NewFoe_md(edict_t* ent)
+{
+	SpawnFoe(ent, 2);
+}
+void NewFoe_hd(edict_t* ent)
+{
+	SpawnFoe(ent, 3);
+}
+//David End
+
 
 /*
 =================
@@ -987,6 +1003,14 @@ void ClientCommand (edict_t *ent)
 		Cmd_Wave_f (ent);
 	else if (Q_stricmp(cmd, "playerlist") == 0)
 		Cmd_PlayerList_f(ent);
+	//David Begin
+	else if (Q_stricmp(cmd, "newfoe_weak") == 0)
+		NewFoe_wk(ent);
+	else if (Q_stricmp(cmd, "newfoe_medium") == 0)
+		NewFoe_md(ent);
+	else if (Q_stricmp(cmd, "newfoe_hard") == 0)
+		NewFoe_hd(ent);
+	//David end
 	else	// anything that doesn't match a command will be a chat
 		Cmd_Say_f (ent, false, true);
 }

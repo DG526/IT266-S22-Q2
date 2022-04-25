@@ -829,7 +829,10 @@ void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, qboolean hyper, in
 	VectorScale (forward, -2, ent->client->kick_origin);
 	ent->client->kick_angles[0] = -1;
 
-	fire_blaster (ent, start, forward, damage, 1000, effect, hyper);
+	//fire_blaster (ent, start, forward, damage, 1000, effect, hyper); //Commented original code
+	//David begin
+	fire_rocket(ent, start, forward, 250, 1650, 120, 120);
+	//David end
 
 	// send muzzle flash
 	gi.WriteByte (svc_muzzleflash);
@@ -859,7 +862,13 @@ void Weapon_Blaster_Fire (edict_t *ent)
 void Weapon_Blaster (edict_t *ent)
 {
 	static int	pause_frames[]	= {19, 32, 0};
-	static int	fire_frames[]	= {5, 0};
+	//static int	fire_frames[]	= {5, 0};//Commented origninal code
+	//David begin
+	int fire_frames[48];
+	for (int i = 1; i < 49; i++) {
+		fire_frames[i - 1] = i + 4;
+	}
+	//David end
 
 	Weapon_Generic (ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_Blaster_Fire);
 }

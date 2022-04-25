@@ -1803,3 +1803,69 @@ void ClientBeginServerFrame (edict_t *ent)
 
 	client->latched_buttons = 0;
 }
+
+//David begin
+void SpawnFoe(edict_t *self, int difficulty) {
+	Com_Printf("Attempting to spawn a foe...\n");
+	if (!self->client)
+		return;
+	self->client->foe = G_Spawn();
+	vec3_t selfOrigin;
+	VectorCopy(self->s.origin, selfOrigin);
+	float yaw = self->s.angles[YAW], dist = 50.0f;
+	float yaw2 = yaw * (M_PI * 2 / 360);
+	vec3_t spawnDirCrd;
+	Com_Printf("Placing foe at %f degrees / %f radians.\n", yaw, yaw2);
+	spawnDirCrd[0] = cos(yaw2) * dist;
+	spawnDirCrd[1] = sin(yaw2) * dist;
+	spawnDirCrd[2] = 0;
+	VectorAdd(selfOrigin, spawnDirCrd, self->client->foe->s.origin);
+	self->client->foe->s.angles[YAW] = yaw + 180;
+
+	NewChick(self->client->foe, difficulty);
+
+}
+
+extern void SP_monster_chick(edict_t* self);
+extern void set_chick_level(edict_t* self, int level);
+
+void NewChick(edict_t* ent, int difficulty) {
+	SP_monster_chick(ent);
+	int hiLvl = 0;
+	float odd = random() * 2;
+	if (odd < 1)
+		hiLvl = 1;
+	switch (difficulty) {
+	case 1:
+		if (!hiLvl) {
+			set_chick_level(ent, 1);
+			Com_Printf("Spawned a Chick at level 1.\n");
+		}
+		else {
+			set_chick_level(ent, 2);
+			Com_Printf("Spawned a Chick at level 2.\n");
+		}
+		break;
+	case 2:
+		if (!hiLvl) {
+			set_chick_level(ent, 3);
+			Com_Printf("Spawned a Chick at level 3.\n");
+		}
+		else {
+			set_chick_level(ent, 4);
+			Com_Printf("Spawned a Chick at level 4. Good luck.\n");
+		}
+		break;
+	case 3:
+		if (!hiLvl) {
+			set_chick_level(ent, 5);
+			Com_Printf("Spawned a Chick at level 5. Good luck, you'll need it.\n");
+		}
+		else {
+			set_chick_level(ent, 6);
+			Com_Printf("Spawned a Chick at level 6. Say your prayers!\n");
+		}
+		break;
+	}
+}
+//David end

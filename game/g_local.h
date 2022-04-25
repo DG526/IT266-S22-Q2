@@ -445,6 +445,10 @@ typedef struct
 
 	int			power_armor_type;
 	int			power_armor_power;
+
+	//David Begin
+	int probPool, probFire, probIce, probLtng, probDark, probExplsn;	//Elemental Probablilities; pool is total, rest are chance out of total.
+	//David End
 } monsterinfo_t;
 
 
@@ -693,6 +697,10 @@ void M_CatagorizePosition (edict_t *ent);
 qboolean M_CheckAttack (edict_t *self);
 void M_FlyCheck (edict_t *self);
 void M_CheckGround (edict_t *ent);
+//David Begin
+void M_PickElement(edict_t* self);
+void M_HitEachOther(edict_t* self, edict_t* foe);
+//David End
 
 //
 // g_misc.c
@@ -754,6 +762,10 @@ void InitClientPersistant (gclient_t *client);
 void InitClientResp (gclient_t *client);
 void InitBodyQue (void);
 void ClientBeginServerFrame (edict_t *ent);
+//David begin
+void SpawnFoe(edict_t *self, int difficulty);
+void NewChick(edict_t *ent, int difficulty);
+//David end
 
 //
 // g_player.c
@@ -959,6 +971,10 @@ struct gclient_s
 
 	edict_t		*chase_target;		// player we are chasing
 	qboolean	update_chase;		// need to update chase info?
+
+	//David begin
+	edict_t* foe;	//Current enemy the player is against
+	//David end
 };
 
 
@@ -1109,5 +1125,11 @@ struct edict_s
 	// common data blocks
 	moveinfo_t		moveinfo;
 	monsterinfo_t	monsterinfo;
+
+	//David Begin
+	int lvlFire, lvlIce, lvlLightning, lvlDark, lvlExplosion;	//Elemental Levels
+	int stun, dot, frozen, redDmg, blessing, blind;		//Status Effects
+	int chosenElem;
+	//David End
 };
 

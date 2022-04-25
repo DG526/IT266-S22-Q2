@@ -418,7 +418,10 @@ void M_MoveFrame (edict_t *self)
 
 void monster_think (edict_t *self)
 {
-	M_MoveFrame (self);
+	//M_MoveFrame (self); //Commented original code
+	//David Begin
+	M_PickElement(self);
+	//David End
 	if (self->linkcount != self->monsterinfo.linkcount)
 	{
 		self->monsterinfo.linkcount = self->linkcount;
@@ -738,3 +741,35 @@ void swimmonster_start (edict_t *self)
 	self->think = swimmonster_start_go;
 	monster_start (self);
 }
+
+//David Begin
+void M_HitEachOther(edict_t* self, edict_t* foe) {
+	if (!self || !foe)
+		return;
+	
+
+}
+void M_PickElement(edict_t* self) {
+	float pool = self->monsterinfo.probPool;
+	int modifiedProbs[] = { self->monsterinfo.probFire, 
+							self->monsterinfo.probIce + self->monsterinfo.probFire, 
+							self->monsterinfo.probLtng + self->monsterinfo.probIce + self->monsterinfo.probFire, 
+							self->monsterinfo.probDark + self->monsterinfo.probLtng + self->monsterinfo.probIce + self->monsterinfo.probFire,
+							self->monsterinfo.probExplsn + self->monsterinfo.probDark + self->monsterinfo.probLtng + self->monsterinfo.probIce + self->monsterinfo.probFire 
+						  };
+	float choice = random() * pool;
+	int elmChoice = 0;
+	if (choice < modifiedProbs[0])
+		elmChoice = 1;
+	else if (choice < modifiedProbs[1])
+		elmChoice = 2;
+	else if (choice < modifiedProbs[2])
+		elmChoice = 3;
+	else if (choice < modifiedProbs[3])
+		elmChoice = 4;
+	else if (choice < modifiedProbs[4])
+		elmChoice = 5;
+	self->chosenElem = elmChoice;
+	printf("Got number %f, chose element %i.\n", choice, elmChoice);
+}
+//David End
