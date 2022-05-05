@@ -420,7 +420,7 @@ void monster_think (edict_t *self)
 {
 	//M_MoveFrame (self); //Commented original code
 	//David Begin
-	M_PickElement(self);
+	//M_PickElement(self);
 	//David End
 	if (self->linkcount != self->monsterinfo.linkcount)
 	{
@@ -744,12 +744,185 @@ void swimmonster_start (edict_t *self)
 
 //David Begin
 void M_HitEachOther(edict_t* self, edict_t* foe) {
+	float neu = 1, eff = 2, sef = 1.25f, ief = 0.5f, sie = 0.85f; //neutral, effective, somewhat effective, ineffective, somewhat ineffective.
+	float dmgMultChart[6][6] = {
+		{0,	0,	0,	0,	0,	0},
+		{neu, neu, eff, sie, ief, sef},
+		{neu, ief, neu, sef, sie, eff},
+		{neu, sef, sie, neu, eff, ief},
+		{neu, eff, sef, ief, neu, sie},
+		{neu, sie, ief, eff, sef, neu}
+	};
 	if (!self || !foe)
 		return;
+	Com_Printf("Getting ready to attack...\n");
 	
+	M_PickElement(self);
+	int playerElmLvl = 0, monsterElmLvl = 0;
+	char* playerElm, *monsterElm;
+	switch (foe->chosenElem) {
+	case 1:
+		playerElmLvl = foe->lvlFire;
+		playerElm = "fire";
+		break;
+	case 2:
+		playerElmLvl = foe->lvlIce;
+		playerElm = "ice";
+		break;
+	case 3:
+		playerElmLvl = foe->lvlLightning;
+		playerElm = "lightning";
+		break;
+	case 4:
+		playerElmLvl = foe->lvlDark;
+		playerElm = "dark";
+		break;
+	case 5:
+		playerElmLvl = foe->lvlExplosion;
+		playerElm = "explosion";
+		break;
+	}
+	switch (self->chosenElem) {
+	case 1:
+		monsterElmLvl = self->lvlFire;
+		monsterElm = "fire";
+		break;
+	case 2:
+		monsterElmLvl = self->lvlIce;
+		monsterElm = "ice";
+		break;
+	case 3:
+		monsterElmLvl = self->lvlLightning;
+		monsterElm = "lightning";
+		break;
+	case 4:
+		monsterElmLvl = self->lvlDark;
+		monsterElm = "dark";
+		break;
+	case 5:
+		monsterElmLvl = self->lvlExplosion;
+		monsterElm = "explosion";
+		break;
+	}
+	int dmg2monster = Elm_Damage(foe->chosenElem, playerElmLvl);
+	dmg2monster *= dmgMultChart[foe->chosenElem][self->chosenElem];
+	for (int i = 0; i < self->redDmg; i++)
+		dmg2monster *= 0.75f;
+	int dmg2player = Elm_Damage(self->chosenElem, monsterElmLvl);
+	dmg2player *= dmgMultChart[self->chosenElem][foe->chosenElem];
+	for (int i = 0; i < foe->redDmg; i++)
+		dmg2player *= 0.75f;
+	self->health -= dmg2monster;
+	//T_Damage(self, foe, foe, vec3_origin, vec3_origin, vec3_origin, dmg2monster, 0, DAMAGE_NO_KNOCKBACK, 49 + foe->chosenElem);
+	if (self->health > 0)
+		T_Damage(foe, self, self, vec3_origin, vec3_origin, vec3_origin, dmg2player, 0, DAMAGE_NO_KNOCKBACK, 49 + self->chosenElem);
+	if (self->chosenElem > 0 && foe->chosenElem > 0) {
+		if (dmgMultChart[foe->chosenElem][self->chosenElem] == eff) {
+			Com_Printf("Player's attack overpowers the monster's!\n");
+			foe->client->elementXP[foe->chosenElem - 1] += self->monsterinfo.xpMult * 4;
+		}
+		if (dmgMultChart[foe->chosenElem][self->chosenElem] == sef) {
+			Com_Printf("Player's attack somewhat overpowers the monster's.\n");
+			foe->client->elementXP[foe->chosenElem - 1] += self->monsterinfo.xpMult;
+		}
+		if (dmgMultChart[foe->chosenElem][self->chosenElem] == ief)
+			Com_Printf("The monster's attack overpowers the player's!\n");
+		if (dmgMultChart[foe->chosenElem][self->chosenElem] == ief)
+			Com_Printf("The monster's attack somewhat overpowers the player's.\n");
+	}
+	if (dmg2monster > 0)
+		Com_Printf("Player deals %i %s damage to the monster.\n", dmg2monster, playerElm);
+	if (dmg2player > 0)
+		Com_Printf("The monster deals %i %s damage to the player.\n", dmg2player, monsterElm);
 
+	Atk_FX(foe->chosenElem, playerElmLvl, dmg2monster, foe, self);
+	Atk_FX(self->chosenElem, monsterElmLvl, dmg2player, self, foe);
+
+	M_TickStatus(self, foe);
+
+	Com_Printf("Monster has %i health remaining.\n\n", self->health);
+}
+void M_TickStatus(edict_t* self, edict_t* foe) {
+	if (!self || !foe)
+		return;
+	if (foe->health > 0) {
+		if (foe->dot) {
+			int dmg = foe->max_health / 20;
+			foe->health -= dmg;
+			if (foe->redDmg) {
+				for (int i = 0; i < foe->redDmg; i++)
+					dmg *= 0.75f;
+			}
+			Com_Printf("Player takes %i damage from being on fire.\n",dmg);
+			foe->dot--;
+			if (!foe->dot)
+				Com_Printf("Player is no longer on fire.\n");
+		}
+		if (foe->stun) {
+			foe->stun = 0;
+			Com_Printf("Player is no longer stunned!\n");
+		}
+		if (foe->frozen) {
+			foe->frozen--;
+			if(!foe->frozen)
+				Com_Printf("Player is no longer frozen!\n");
+		}
+		if (foe->blessing) {
+			foe->blessing--;
+			if(!foe->blessing)
+				Com_Printf("Player's blessing wore off.\n");
+		}
+		if (foe->redDmg) {
+			foe->redDmg = 0;
+		}
+		if (foe->blind) {
+			foe->blind--;
+			if (!foe->blind)
+				Com_Printf("Player can see clearly again!\n");
+		}
+	}
+	if (self->health > 0) {
+		if (self->dot) {
+			int dmg = self->max_health / 20;
+			self->health -= dmg;
+			if (self->redDmg) {
+				for (int i = 0; i < self->redDmg; i++)
+					dmg *= 0.75f;
+			}
+			Com_Printf("Enemy takes %i damage from being on fire.\n", dmg);
+			self->dot--;
+			if (!self->dot)
+				Com_Printf("Enemy is no longer on fire.\n");
+		}
+		if (self->stun) {
+			self->stun = 0;
+			Com_Printf("Enemy is no longer stunned!\n");
+		}
+		if (self->frozen) {
+			self->frozen--;
+			if (!self->frozen)
+				Com_Printf("Enemy is no longer frozen!\n");
+		}
+		if (self->blessing) {
+			self->blessing--;
+			if (!self->blessing)
+				Com_Printf("Enemy's blessing wore off.\n");
+		}
+		if (self ->redDmg) {
+			self->redDmg = 0;
+		}
+		if (self->blind) {
+			self->blind--;
+			if (!self->blind)
+				Com_Printf("Enemy can see clearly again!\n");
+		}
+	}
 }
 void M_PickElement(edict_t* self) {
+	if (!self) {
+		Com_Printf("No monster to pick an element.");
+		return;
+	}
 	float pool = self->monsterinfo.probPool;
 	int modifiedProbs[] = { self->monsterinfo.probFire, 
 							self->monsterinfo.probIce + self->monsterinfo.probFire, 
@@ -758,18 +931,240 @@ void M_PickElement(edict_t* self) {
 							self->monsterinfo.probExplsn + self->monsterinfo.probDark + self->monsterinfo.probLtng + self->monsterinfo.probIce + self->monsterinfo.probFire 
 						  };
 	float choice = random() * pool;
-	int elmChoice = 0;
+	int elmChoice = ELM_NONE;
+	if (self->stun || self->frozen) {
+		self->chosenElem = elmChoice;
+		return;
+	}
+	if (self->blind) {
+		float odd = random();
+		if (odd < 0.5f) {
+			self->chosenElem = elmChoice;
+			return;
+		}
+	}
 	if (choice < modifiedProbs[0])
-		elmChoice = 1;
+		elmChoice = ELM_FIRE;
 	else if (choice < modifiedProbs[1])
-		elmChoice = 2;
+		elmChoice = ELM_ICE;
 	else if (choice < modifiedProbs[2])
-		elmChoice = 3;
+		elmChoice = ELM_LIGHTNING;
 	else if (choice < modifiedProbs[3])
-		elmChoice = 4;
+		elmChoice = ELM_DARK;
 	else if (choice < modifiedProbs[4])
-		elmChoice = 5;
+		elmChoice = ELM_EXPLOSION;
 	self->chosenElem = elmChoice;
-	printf("Got number %f, chose element %i.\n", choice, elmChoice);
+	Com_Printf("Got number %f, chose element %i.\n", choice, elmChoice);
+}
+int Elm_Damage(int element, int level) {
+	switch (element) {
+	case 1: {//Fire
+		float mult = random() * 0.5f + 0.75f;
+		switch (level) {
+		case 1: {
+			float dmg = 25 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 2: {
+			float dmg = 40 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 3: {
+			float dmg = 75 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 4: {
+			float dmg = 120 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 5: {
+			float dmg = 200 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		default: //None or invalid
+			return 0;
+		}
+	}
+	case 2: {//Ice
+		float mult = random() * 0.3f + 0.85f;
+		switch (level) {
+		case 1: {
+			float dmg = 20 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 2: {
+			float dmg = 35 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 3: {
+			float dmg = 60 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 4: {
+			float dmg = 110 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 5: {
+			float dmg = 220 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		default: //None or invalid
+			return 0;
+		}
+	}
+	case 3: {//Lightning
+		float mult = random() * 0.3f + 0.85f;
+		switch (level) {
+		case 1: {
+			float dmg = 15 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 2: {
+			float dmg = 30 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 3: {
+			float dmg = 55 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 4: {
+			float dmg = 100 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 5: {
+			float dmg = 210 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		default: //None or invalid
+			return 0;
+		}
+	}
+	case 4: {//Dark
+		float mult = random() * 0.4f + 0.80f;
+		switch (level) {
+		case 1: {
+			float dmg = 20 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 2: {
+			float dmg = 35 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 3: {
+			float dmg = 55 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 4: {
+			float dmg = 100 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 5: {
+			float dmg = 225 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		default: //None or invalid
+			return 0;
+		}
+	}
+	case 5: {//Explosion
+		float mult = random() * 0.7f + 0.45f;
+		switch (level) {
+		case 1: {
+			float dmg = 40 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 2: {
+			float dmg = 80 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 3: {
+			float dmg = 135 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 4: {
+			float dmg = 180 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		case 5: {
+			float dmg = 250 * mult;
+			return (int)nearbyintf(dmg);
+		}
+		default: //None or invalid
+			return 0;
+		}
+	}
+	default: //None or invalid
+		return 0;
+	}
+}
+void Atk_FX(int element, int level, int damage, edict_t* user, edict_t* target) {
+	if (level < 3 || !user || !target)
+		return;
+	switch (element) {
+	case 1: {
+		float odd = random();
+		if (odd < 0.5f) {
+			int rounds = floorf(random() * 3) + 3;
+			target->dot += rounds;
+		}
+		if (level == 5) {
+			int healing = user->max_health * 0.03f;
+			user->health += healing;
+			if (user->health > user->max_health)
+				user->health = user->max_health;
+		}
+	}
+	case 2: {
+		user->redDmg += 1;
+		if (level == 5) {
+			float odd = random();
+			if (odd < 0.35f) {
+				int rounds = floorf(random() * 2) + 2;
+				target->frozen += rounds;
+			}
+		}
+	}
+	case 3: {
+
+		float odd = random();
+		if (odd < 0.5f)
+			target->stun = 1;
+		if (level == 5) {
+			odd = random();
+			if (odd < 0.15f)
+				user->blessing = 2;
+		}
+	}
+	case 4: {
+		int healing = damage * 0.4f;
+		user->health += healing;
+		if (user->health > user->max_health)
+			user->health = user->max_health;
+
+		if (level == 5) {
+			float odd = random();
+			if (odd < 0.03f) {
+				target->health = 0;
+				if (target->blessing) {
+					target->blessing = 0;
+					target->health = target->max_health * 0.05f;
+				}
+			}
+		}
+	}
+	case 5: {
+
+		float odd = random();
+		if (odd < 0.5f)
+			target->stun = 1;
+		if (level == 5) {
+			odd = random();
+			if (odd < 0.6f) {
+				int rounds = floorf(random() * 3) + 3;
+				target->blind += rounds;
+			}
+		}
+	}
+	}
 }
 //David End

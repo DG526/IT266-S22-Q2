@@ -901,6 +901,7 @@ void Cmd_PlayerList_f(edict_t *ent)
 
 //David Begin
 extern void SpawnFoe(edict_t* self, int difficulty);
+extern void C_PickElement(edict_t* self, int elm);
 void NewFoe_wk(edict_t* ent)
 {
 	SpawnFoe(ent, 1);
@@ -912,6 +913,16 @@ void NewFoe_md(edict_t* ent)
 void NewFoe_hd(edict_t* ent)
 {
 	SpawnFoe(ent, 3);
+}
+
+void PickMove(edict_t* ent, int elm) {
+	Com_Printf("Picked element %i.\n", elm);
+	C_PickElement(ent, elm);
+}
+
+extern void M_PickElement(edict_t* self);
+void TestElmPick(edict_t* ent) {
+	M_PickElement(ent->client->foe);
 }
 //David End
 
@@ -1010,6 +1021,20 @@ void ClientCommand (edict_t *ent)
 		NewFoe_md(ent);
 	else if (Q_stricmp(cmd, "newfoe_hard") == 0)
 		NewFoe_hd(ent);
+	else if (Q_stricmp(cmd, "p_fire") == 0) {
+		Com_Printf("Chose fire!\n");
+		PickMove(ent, 1);
+	}
+	else if (Q_stricmp(cmd, "p_ice") == 0)
+		PickMove(ent, 2);
+	else if (Q_stricmp(cmd, "p_lightning") == 0)
+		PickMove(ent, 3);
+	else if (Q_stricmp(cmd, "p_dark") == 0)
+		PickMove(ent, 4);
+	else if (Q_stricmp(cmd, "p_explosion") == 0)
+		PickMove(ent, 5);
+	else if (Q_stricmp(cmd, "test_monster") == 0)
+		TestElmPick(ent);	
 	//David end
 	else	// anything that doesn't match a command will be a chat
 		Cmd_Say_f (ent, false, true);

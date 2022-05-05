@@ -667,6 +667,13 @@ void SP_monster_chick (edict_t *self)
 	self->lvlDark = 1;
 	self->lvlExplosion = 2;
 
+	self->blind = 0;
+	self->blessing = 0;
+	self->dot = 0;
+	self->stun = 0;
+	self->redDmg = 0;
+	self->frozen = 0;
+
 	self->monsterinfo.probPool = 13;
 	self->monsterinfo.probFire = 0;
 	self->monsterinfo.probIce = 5;
@@ -695,9 +702,11 @@ void SP_monster_chick (edict_t *self)
 
 	//walkmonster_start (self); Commented Original code
 }
+//David Begin
 void set_chick_level(edict_t* self, int level) {
 	switch (level) {
 	case 1:
+		self->max_health = 75;
 		self->lvlFire = 0;
 		self->lvlIce = 1;
 		self->lvlLightning = 1;
@@ -705,6 +714,7 @@ void set_chick_level(edict_t* self, int level) {
 		self->lvlExplosion = 2;
 		break;
 	case 2:
+		self->max_health = 110;
 		self->lvlFire = 0;
 		self->lvlIce = 1;
 		self->lvlLightning = 2;
@@ -712,6 +722,7 @@ void set_chick_level(edict_t* self, int level) {
 		self->lvlExplosion = 2;
 		break;
 	case 3:
+		self->max_health = 160;
 		self->lvlFire = 0;
 		self->lvlIce = 2;
 		self->lvlLightning = 2;
@@ -719,6 +730,7 @@ void set_chick_level(edict_t* self, int level) {
 		self->lvlExplosion = 3;
 		break;
 	case 4:
+		self->max_health = 250;
 		self->lvlFire = 0;
 		self->lvlIce = 2;
 		self->lvlLightning = 2;
@@ -726,6 +738,7 @@ void set_chick_level(edict_t* self, int level) {
 		self->lvlExplosion = 3;
 		break;
 	case 5:
+		self->max_health = 320;
 		self->lvlFire = 0;
 		self->lvlIce = 3;
 		self->lvlLightning = 3;
@@ -733,6 +746,7 @@ void set_chick_level(edict_t* self, int level) {
 		self->lvlExplosion = 5;
 		break;
 	case 6:
+		self->max_health = 415;
 		self->lvlFire = 0;
 		self->lvlIce = 3;
 		self->lvlLightning = 3;
@@ -740,4 +754,7 @@ void set_chick_level(edict_t* self, int level) {
 		self->lvlExplosion = 5;
 		break;
 	}
+	self->monsterinfo.xpMult = level;
+	self->health = self->max_health;
 }
+//David End

@@ -385,3 +385,137 @@ void SP_monster_gladiator (edict_t *self)
 
 	walkmonster_start (self);
 }
+
+//David Begin
+void SP_monster_gladiator2(edict_t* self)
+{
+	/*
+	if (deathmatch->value)
+	{
+		G_FreeEdict(self);
+		return;
+	}
+	*/
+
+	sound_pain1 = gi.soundindex("gladiator/pain.wav");
+	sound_pain2 = gi.soundindex("gladiator/gldpain2.wav");
+	sound_die = gi.soundindex("gladiator/glddeth2.wav");
+	sound_gun = gi.soundindex("gladiator/railgun.wav");
+	sound_cleaver_swing = gi.soundindex("gladiator/melee1.wav");
+	sound_cleaver_hit = gi.soundindex("gladiator/melee2.wav");
+	sound_cleaver_miss = gi.soundindex("gladiator/melee3.wav");
+	sound_idle = gi.soundindex("gladiator/gldidle1.wav");
+	sound_search = gi.soundindex("gladiator/gldsrch1.wav");
+	sound_sight = gi.soundindex("gladiator/sight.wav");
+
+	self->movetype = MOVETYPE_STEP;
+	self->solid = SOLID_BBOX;
+	self->s.modelindex = gi.modelindex("models/monsters/gladiatr/tris.md2");
+	VectorSet(self->mins, -32, -32, -24);
+	VectorSet(self->maxs, 32, 32, 64);
+	/*
+	self->health = 400;
+	self->gib_health = -175;
+	*/
+
+	//David begin
+	self->gib_health = 0;
+
+	self->lvlFire = 1;
+	self->lvlIce = 0;
+	self->lvlLightning = 1;
+	self->lvlDark = 0;
+	self->lvlExplosion = 2;
+
+	self->blind = 0;
+	self->blessing = 0;
+	self->dot = 0;
+	self->stun = 0;
+	self->redDmg = 0;
+	self->frozen = 0;
+
+	self->monsterinfo.probPool = 10;
+	self->monsterinfo.probFire = 2;
+	self->monsterinfo.probIce = 0;
+	self->monsterinfo.probLtng = 5;
+	self->monsterinfo.probDark = 0;
+	self->monsterinfo.probExplsn = 3;
+	//David end
+
+	self->mass = 400;
+
+	self->pain = gladiator_pain;
+	self->die = gladiator_die;
+
+	self->monsterinfo.stand = gladiator_stand;
+	self->monsterinfo.walk = gladiator_walk;
+	self->monsterinfo.run = gladiator_run;
+	self->monsterinfo.dodge = NULL;
+	self->monsterinfo.attack = gladiator_attack;
+	self->monsterinfo.melee = gladiator_melee;
+	self->monsterinfo.sight = gladiator_sight;
+	self->monsterinfo.idle = gladiator_idle;
+	self->monsterinfo.search = gladiator_search;
+
+	gi.linkentity(self);
+	self->monsterinfo.currentmove = &gladiator_move_stand;
+	self->monsterinfo.scale = MODEL_SCALE;
+
+	//walkmonster_start(self);
+}
+
+void set_gladiator_level(edict_t* self, int level) {
+	switch (level) {
+	case 1:
+		self->max_health = 90;
+		self->lvlFire = 0;
+		self->lvlIce = 0;
+		self->lvlLightning = 1;
+		self->lvlDark = 1;
+		self->lvlExplosion = 2;
+		break;
+	case 2:
+		self->max_health = 140;
+		self->lvlFire = 0;
+		self->lvlIce = 0;
+		self->lvlLightning = 2;
+		self->lvlDark = 2;
+		self->lvlExplosion = 2;
+		break;
+	case 3:
+		self->max_health = 200;
+		self->lvlFire = 0;
+		self->lvlIce = 0;
+		self->lvlLightning = 2;
+		self->lvlDark = 3;
+		self->lvlExplosion = 3;
+		break;
+	case 4:
+		self->max_health = 290;
+		self->lvlFire = 0;
+		self->lvlIce = 0;
+		self->lvlLightning = 3;
+		self->lvlDark = 4;
+		self->lvlExplosion = 4;
+		break;
+	case 5:
+		self->max_health = 400;
+		self->lvlFire = 0;
+		self->lvlIce = 0;
+		self->lvlLightning = 4;
+		self->lvlDark = 4;
+		self->lvlExplosion = 5;
+		break;
+	case 6:
+		self->max_health = 540;
+		self->lvlFire = 0;
+		self->lvlIce = 0;
+		self->lvlLightning = 4;
+		self->lvlDark = 5;
+		self->lvlExplosion = 5;
+		break;
+	}
+	self->monsterinfo.xpMult = level;
+	self->health = self->max_health;
+}
+//David End

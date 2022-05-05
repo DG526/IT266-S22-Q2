@@ -448,6 +448,7 @@ typedef struct
 
 	//David Begin
 	int probPool, probFire, probIce, probLtng, probDark, probExplsn;	//Elemental Probablilities; pool is total, rest are chance out of total.
+	int xpMult;
 	//David End
 } monsterinfo_t;
 
@@ -502,6 +503,12 @@ extern	int	body_armor_index;
 #define MOD_TRIGGER_HURT	31
 #define MOD_HIT				32
 #define MOD_TARGET_BLASTER	33
+#define MOD_C_FIRE			50
+#define MOD_C_ICE			51
+#define MOD_C_LIGHTNING		52
+#define MOD_C_DARK			53
+#define MOD_C_EXPLOSION		54
+#define MOD_C_INSTAKILL		55
 #define MOD_FRIENDLY_FIRE	0x8000000
 
 extern	int	meansOfDeath;
@@ -700,6 +707,9 @@ void M_CheckGround (edict_t *ent);
 //David Begin
 void M_PickElement(edict_t* self);
 void M_HitEachOther(edict_t* self, edict_t* foe);
+void M_TickStatus(edict_t* self, edict_t* foe);
+int Elm_Damage(int element, int level);
+void Atk_FX(int element, int level, int damage, edict_t* user, edict_t* target);
 //David End
 
 //
@@ -764,7 +774,10 @@ void InitBodyQue (void);
 void ClientBeginServerFrame (edict_t *ent);
 //David begin
 void SpawnFoe(edict_t *self, int difficulty);
-void NewChick(edict_t *ent, int difficulty);
+void NewEnemy(edict_t *ent, int difficulty);
+void Victory(edict_t* self);
+void C_PickElement(edict_t* self, int elm);
+int LevelUp(int exp);
 //David end
 
 //
@@ -974,6 +987,9 @@ struct gclient_s
 
 	//David begin
 	edict_t* foe;	//Current enemy the player is against
+	int elementXP[5];
+	int inited;
+	int victories;
 	//David end
 };
 
@@ -1132,4 +1148,11 @@ struct edict_s
 	int chosenElem;
 	//David End
 };
-
+//David Begin
+#define ELM_NONE 0
+#define ELM_FIRE 1
+#define ELM_ICE 2
+#define ELM_LIGHTNING 3
+#define ELM_DARK 4
+#define ELM_EXPLOSION 5
+//David End

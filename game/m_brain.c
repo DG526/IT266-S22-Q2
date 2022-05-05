@@ -620,11 +620,13 @@ void brain_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 */
 void SP_monster_brain (edict_t *self)
 {
+	/*
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);
 		return;
 	}
+	*/
 
 	sound_chest_open = gi.soundindex ("brain/brnatck1.wav");
 	sound_tentacles_extend = gi.soundindex ("brain/brnatck2.wav");
@@ -646,9 +648,35 @@ void SP_monster_brain (edict_t *self)
 	self->s.modelindex = gi.modelindex ("models/monsters/brain/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
-
+	/*
 	self->health = 300;
 	self->gib_health = -150;
+	*/
+
+	//David begin
+	self->gib_health = 0;
+
+	self->lvlFire = 1;
+	self->lvlIce = 0;
+	self->lvlLightning = 1;
+	self->lvlDark = 0;
+	self->lvlExplosion = 2;
+
+	self->blind = 0;
+	self->blessing = 0;
+	self->dot = 0;
+	self->stun = 0;
+	self->redDmg = 0;
+	self->frozen = 0;
+
+	self->monsterinfo.probPool = 10;
+	self->monsterinfo.probFire = 2;
+	self->monsterinfo.probIce = 0;
+	self->monsterinfo.probLtng = 5;
+	self->monsterinfo.probDark = 0;
+	self->monsterinfo.probExplsn = 3;
+	//David end
+
 	self->mass = 400;
 
 	self->pain = brain_pain;
@@ -672,5 +700,62 @@ void SP_monster_brain (edict_t *self)
 	self->monsterinfo.currentmove = &brain_move_stand;	
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	walkmonster_start (self);
+	//walkmonster_start (self);
 }
+
+//David Begin
+void set_brain_level(edict_t* self, int level) {
+	switch (level) {
+	case 1:
+		self->max_health = 90;
+		self->lvlFire = 1;
+		self->lvlIce = 0;
+		self->lvlLightning = 1;
+		self->lvlDark = 0;
+		self->lvlExplosion = 2;
+		break;
+	case 2:
+		self->max_health = 140;
+		self->lvlFire = 2;
+		self->lvlIce = 0;
+		self->lvlLightning = 2;
+		self->lvlDark = 0;
+		self->lvlExplosion = 3;
+		break;
+	case 3:
+		self->max_health = 200;
+		self->lvlFire = 2;
+		self->lvlIce = 0;
+		self->lvlLightning = 3;
+		self->lvlDark = 0;
+		self->lvlExplosion = 3;
+		break;
+	case 4:
+		self->max_health = 290;
+		self->lvlFire = 3;
+		self->lvlIce = 0;
+		self->lvlLightning = 3;
+		self->lvlDark = 0;
+		self->lvlExplosion = 4;
+		break;
+	case 5:
+		self->max_health = 400;
+		self->lvlFire = 4;
+		self->lvlIce = 0;
+		self->lvlLightning = 4;
+		self->lvlDark = 0;
+		self->lvlExplosion = 5;
+		break;
+	case 6:
+		self->max_health = 540;
+		self->lvlFire = 4;
+		self->lvlIce = 0;
+		self->lvlLightning = 5;
+		self->lvlDark = 0;
+		self->lvlExplosion = 5;
+		break;
+	}
+	self->monsterinfo.xpMult = level;
+	self->health = self->max_health;
+}
+//David End

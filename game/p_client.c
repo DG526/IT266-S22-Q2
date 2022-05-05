@@ -383,6 +383,25 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 				message = "tried to invade";
 				message2 = "'s personal space";
 				break;
+			case MOD_C_FIRE:
+				message = "was cremated by";
+				break;
+			case MOD_C_ICE:
+				message = "met a frigid fate at the hands of";
+				break;
+			case MOD_C_LIGHTNING:
+				message = "was electrocuted by";
+				break;
+			case MOD_C_DARK:
+				message = "met a cruel fate at the hands of";
+				break;
+			case MOD_C_EXPLOSION:
+				message = "was scattered across the room by";
+				break;
+			case MOD_C_INSTAKILL:
+				message = "will never be heard from again due to";
+				message2 = "'s stygian powers";
+				break;
 			}
 			if (message)
 			{
@@ -590,7 +609,10 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	}
 
 	self->deadflag = DEAD_DEAD;
-
+	//David Begin
+	if (self->client->foe)
+		G_FreeEdict(self->client->foe);
+	//David End
 	gi.linkentity (self);
 }
 
@@ -627,6 +649,10 @@ void InitClientPersistant (gclient_t *client)
 	client->pers.max_slugs		= 50;
 
 	client->pers.connected = true;
+
+	//David Begin
+	client->inited = 0;
+	//David End
 }
 
 
@@ -1805,65 +1831,196 @@ void ClientBeginServerFrame (edict_t *ent)
 }
 
 //David begin
+extern void M_HitEachOther(edict_t* self, edict_t* foe);
+void C_PickElement(edict_t* self, int elm) {
+	if (!self || !self->client || !self->client->foe)
+		return;
+	Com_Printf("Picking an element...\n");
+	self->chosenElem = elm;
+	Com_Printf("Checking for inaction/accuracy statuses...\n");
+	if (self->stun || self->frozen) {
+		self->chosenElem = 0;
+	}
+	else if (self->blind) {
+		Com_Printf("Applying accuracy modifier...\n");
+		float odd = random();
+		if (odd < 0.5f) {
+			self->chosenElem = 0;
+		}
+	}
+	Com_Printf("Applying EXP gain...\n");
+	if (self->chosenElem > 0)
+		self->client->elementXP[elm - 1] += self->client->foe->monsterinfo.xpMult;
+	M_HitEachOther(self->client->foe, self);
+	if (self->client->foe->health <= 0)
+		Victory(self);
+}
+void Victory(edict_t* self) {
+	self->client->victories += 1;
+	if (self->chosenElem > 0)
+		self->client->elementXP[self->chosenElem - 1] += self->client->foe->monsterinfo.xpMult * 10;
+	G_FreeEdict(self->client->foe);
+	self->client->foe = 0;
+	int oldlevel = self->lvlFire;
+	self->lvlFire = LevelUp(self->client->elementXP[0]);
+	if (self->lvlFire > oldlevel)
+		Com_Printf("Your Fire spell has improved!\n");
+	oldlevel = self->lvlIce;
+	self->lvlIce = LevelUp(self->client->elementXP[1]);
+	if (self->lvlIce > oldlevel)
+		Com_Printf("Your Ice spell has improved!\n");
+	oldlevel = self->lvlLightning;
+	self->lvlLightning = LevelUp(self->client->elementXP[2]);
+	if (self->lvlLightning > oldlevel)
+		Com_Printf("Your Lightning spell has improved!\n");
+	oldlevel = self->lvlDark;
+	self->lvlDark = LevelUp(self->client->elementXP[3]);
+	if (self->lvlDark > oldlevel)
+		Com_Printf("Your Dark spell has improved!\n");
+	oldlevel = self->lvlExplosion;
+	self->lvlExplosion = LevelUp(self->client->elementXP[4]);
+	if (self->lvlExplosion > oldlevel)
+		Com_Printf("Your Explosion spell has improved!\n");
+}
+int LevelUp(int exp) {
+	if (exp >= 300)
+		return 5;
+	if (exp >= 180)
+		return 4;
+	if (exp >= 100)
+		return 3;
+	if (exp >= 40)
+		return 2;
+	return 1;
+}
 void SpawnFoe(edict_t *self, int difficulty) {
+	if (self->client->inited == 0) {
+		Com_Printf("Inintializing player variables...\n");
+		self->lvlFire = 1;
+		self->lvlIce = 1;
+		self->lvlLightning = 1;
+		self->lvlDark = 1;
+		self->lvlExplosion = 1;
+		self->client->victories = 0;
+		self->client->elementXP[0] = 0;
+		self->client->elementXP[1] = 0;
+		self->client->elementXP[2] = 0;
+		self->client->elementXP[3] = 0;
+		self->client->elementXP[4] = 0;
+		self->client->inited = 1;
+	}
 	Com_Printf("Attempting to spawn a foe...\n");
 	if (!self->client)
 		return;
+	if (self->client->foe) {
+		Com_Printf("There is already a foe.\n");
+		return;
+	}
+
+	self->max_health = 100 + self->lvlFire * 20 + self->lvlIce * 20 + self->lvlLightning * 20 + self->lvlDark * 20 + self->lvlExplosion * 20;
+	self->health = self->max_health;
+	T_Damage(self, self, self, vec3_origin, vec3_origin, vec3_origin, 0, 0, DAMAGE_NO_KNOCKBACK, 0);
+	self->blind = 0;
+	self->blessing = 0;
+	self->dot = 0;
+	self->stun = 0;
+	self->redDmg = 0;
+	self->frozen = 0;
+
 	self->client->foe = G_Spawn();
 	vec3_t selfOrigin;
 	VectorCopy(self->s.origin, selfOrigin);
 	float yaw = self->s.angles[YAW], dist = 50.0f;
 	float yaw2 = yaw * (M_PI * 2 / 360);
 	vec3_t spawnDirCrd;
-	Com_Printf("Placing foe at %f degrees / %f radians.\n", yaw, yaw2);
+	//Com_Printf("Placing foe at %f degrees / %f radians.\n", yaw, yaw2);
 	spawnDirCrd[0] = cos(yaw2) * dist;
 	spawnDirCrd[1] = sin(yaw2) * dist;
 	spawnDirCrd[2] = 0;
 	VectorAdd(selfOrigin, spawnDirCrd, self->client->foe->s.origin);
 	self->client->foe->s.angles[YAW] = yaw + 180;
 
-	NewChick(self->client->foe, difficulty);
+	NewEnemy(self->client->foe, difficulty);
 
 }
 
 extern void SP_monster_chick(edict_t* self);
 extern void set_chick_level(edict_t* self, int level);
+extern void SP_monster_berserk(edict_t* self);
+extern void set_berserk_level(edict_t* self, int level);
+extern void SP_monster_brain(edict_t* self);
+extern void set_brain_level(edict_t* self, int level);
+extern void SP_monster_gunner2(edict_t* self);
+extern void set_gunner_level(edict_t* self, int level);
+extern void SP_monster_gladiator2(edict_t* self);
+extern void set_gladiator_level(edict_t* self, int level);
 
-void NewChick(edict_t* ent, int difficulty) {
-	SP_monster_chick(ent);
+void NewEnemy(edict_t* ent, int difficulty) {
+	char* monsName = "";
+	void(*summon)(edict_t * self);
+	void(*level)(edict_t * self, int level);
+	float monOdd = random() * 5; //INCREMENT MULTIPLIER WHEN ADDING NEW MONSTERS!!
+	if (monOdd < 1) {
+		monsName = "an Iron Maiden";
+		summon = SP_monster_chick;
+		level = set_chick_level;
+	}
+	else if (monOdd < 2) {
+		monsName = "a Berserker";
+		summon = SP_monster_berserk;
+		level = set_berserk_level;
+	}
+	else if (monOdd < 3) {
+		monsName = "a Brains";
+		summon = SP_monster_brain;
+		level = set_brain_level;
+	}
+	else if (monOdd < 4) {
+		monsName = "a Gunner";
+		summon = SP_monster_gunner2;
+		level = set_gunner_level;
+	}
+	else if (monOdd < 5) {
+		monsName = "a Gladiator";
+		summon = SP_monster_gladiator2;
+		level = set_gladiator_level;
+	}
+	if (!summon || !level)
+		return;
+	summon(ent);
 	int hiLvl = 0;
-	float odd = random() * 2;
-	if (odd < 1)
+	float lvlOdd = random() * 2;
+	if (lvlOdd < 1)
 		hiLvl = 1;
 	switch (difficulty) {
 	case 1:
 		if (!hiLvl) {
-			set_chick_level(ent, 1);
-			Com_Printf("Spawned a Chick at level 1.\n");
+			level(ent, 1);
+			Com_Printf("Spawned %s at level 1.\n", monsName);
 		}
 		else {
-			set_chick_level(ent, 2);
-			Com_Printf("Spawned a Chick at level 2.\n");
+			level(ent, 2);
+			Com_Printf("Spawned %s at level 2.\n", monsName);
 		}
 		break;
 	case 2:
 		if (!hiLvl) {
-			set_chick_level(ent, 3);
-			Com_Printf("Spawned a Chick at level 3.\n");
+			level(ent, 3);
+			Com_Printf("Spawned %s at level 3.\n", monsName);
 		}
 		else {
-			set_chick_level(ent, 4);
-			Com_Printf("Spawned a Chick at level 4. Good luck.\n");
+			level(ent, 4);
+			Com_Printf("Spawned %s at level 4. Good luck.\n", monsName);
 		}
 		break;
 	case 3:
 		if (!hiLvl) {
-			set_chick_level(ent, 5);
-			Com_Printf("Spawned a Chick at level 5. Good luck, you'll need it.\n");
+			level(ent, 5);
+			Com_Printf("Spawned %s at level 5. Good luck, you'll need it.\n", monsName);
 		}
 		else {
-			set_chick_level(ent, 6);
-			Com_Printf("Spawned a Chick at level 6. Say your prayers!\n");
+			level(ent, 6);
+			Com_Printf("Spawned %s at level 6. Say your prayers!\n", monsName);
 		}
 		break;
 	}

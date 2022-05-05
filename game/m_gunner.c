@@ -602,9 +602,35 @@ void SP_monster_gunner (edict_t *self)
 	self->s.modelindex = gi.modelindex ("models/monsters/gunner/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
-
+	/*
 	self->health = 175;
 	self->gib_health = -70;
+	*/
+
+	//David begin
+	self->gib_health = 0;
+
+	self->lvlFire = 0;
+	self->lvlIce = 1;
+	self->lvlLightning = 1;
+	self->lvlDark = 1;
+	self->lvlExplosion = 2;
+
+	self->blind = 0;
+	self->blessing = 0;
+	self->dot = 0;
+	self->stun = 0;
+	self->redDmg = 0;
+	self->frozen = 0;
+
+	self->monsterinfo.probPool = 13;
+	self->monsterinfo.probFire = 4;
+	self->monsterinfo.probIce = 2;
+	self->monsterinfo.probLtng = 3;
+	self->monsterinfo.probDark = 0;
+	self->monsterinfo.probExplsn = 4;
+	//David end
+
 	self->mass = 200;
 
 	self->pain = gunner_pain;
@@ -624,5 +650,137 @@ void SP_monster_gunner (edict_t *self)
 	self->monsterinfo.currentmove = &gunner_move_stand;	
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	walkmonster_start (self);
+	//walkmonster_start (self);
 }
+//David Begin
+void SP_monster_gunner2(edict_t* self)
+{
+	/*
+	if (deathmatch->value)
+	{
+		G_FreeEdict (self);
+		return;
+	}
+	*/
+
+	sound_death = gi.soundindex("gunner/death1.wav");
+	sound_pain = gi.soundindex("gunner/gunpain2.wav");
+	sound_pain2 = gi.soundindex("gunner/gunpain1.wav");
+	sound_idle = gi.soundindex("gunner/gunidle1.wav");
+	sound_open = gi.soundindex("gunner/gunatck1.wav");
+	sound_search = gi.soundindex("gunner/gunsrch1.wav");
+	sound_sight = gi.soundindex("gunner/sight1.wav");
+
+	gi.soundindex("gunner/gunatck2.wav");
+	gi.soundindex("gunner/gunatck3.wav");
+
+	self->movetype = MOVETYPE_STEP;
+	self->solid = SOLID_BBOX;
+	self->s.modelindex = gi.modelindex("models/monsters/gunner/tris.md2");
+	VectorSet(self->mins, -16, -16, -24);
+	VectorSet(self->maxs, 16, 16, 32);
+	/*
+	self->health = 175;
+	self->gib_health = -70;
+	*/
+
+	//David begin
+	self->gib_health = 0;
+
+	self->lvlFire = 0;
+	self->lvlIce = 1;
+	self->lvlLightning = 1;
+	self->lvlDark = 1;
+	self->lvlExplosion = 2;
+
+	self->blind = 0;
+	self->blessing = 0;
+	self->dot = 0;
+	self->stun = 0;
+	self->redDmg = 0;
+	self->frozen = 0;
+
+	self->monsterinfo.probPool = 13;
+	self->monsterinfo.probFire = 4;
+	self->monsterinfo.probIce = 2;
+	self->monsterinfo.probLtng = 3;
+	self->monsterinfo.probDark = 0;
+	self->monsterinfo.probExplsn = 4;
+	//David end
+
+	self->mass = 200;
+
+	self->pain = gunner_pain;
+	self->die = gunner_die;
+
+	self->monsterinfo.stand = gunner_stand;
+	self->monsterinfo.walk = gunner_walk;
+	self->monsterinfo.run = gunner_run;
+	self->monsterinfo.dodge = gunner_dodge;
+	self->monsterinfo.attack = gunner_attack;
+	self->monsterinfo.melee = NULL;
+	self->monsterinfo.sight = gunner_sight;
+	self->monsterinfo.search = gunner_search;
+
+	gi.linkentity(self);
+
+	self->monsterinfo.currentmove = &gunner_move_stand;
+	self->monsterinfo.scale = MODEL_SCALE;
+
+	//walkmonster_start (self);
+}
+void set_gunner_level(edict_t* self, int level) {
+	switch (level) {
+	case 1:
+		self->max_health = 80;
+		self->lvlFire = 2;
+		self->lvlIce = 1;
+		self->lvlLightning = 1;
+		self->lvlDark = 0;
+		self->lvlExplosion = 2;
+		break;
+	case 2:
+		self->max_health = 130;
+		self->lvlFire = 2;
+		self->lvlIce = 1;
+		self->lvlLightning = 2;
+		self->lvlDark = 0;
+		self->lvlExplosion = 2;
+		break;
+	case 3:
+		self->max_health = 180;
+		self->lvlFire = 3;
+		self->lvlIce = 2;
+		self->lvlLightning = 2;
+		self->lvlDark = 0;
+		self->lvlExplosion = 3;
+		break;
+	case 4:
+		self->max_health = 260;
+		self->lvlFire = 4;
+		self->lvlIce = 2;
+		self->lvlLightning = 2;
+		self->lvlDark = 0;
+		self->lvlExplosion = 4;
+		break;
+	case 5:
+		self->max_health = 360;
+		self->lvlFire = 4;
+		self->lvlIce = 3;
+		self->lvlLightning = 2;
+		self->lvlDark = 0;
+		self->lvlExplosion = 4;
+		break;
+	case 6:
+		self->max_health = 440;
+		self->lvlFire = 5;
+		self->lvlIce = 3;
+		self->lvlLightning = 3;
+		self->lvlDark = 0;
+		self->lvlExplosion = 4;
+		break;
+	}
+	self->monsterinfo.xpMult = level;
+	self->health = self->max_health;
+}
+//David End
