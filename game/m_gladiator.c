@@ -440,6 +440,14 @@ void SP_monster_gladiator2(edict_t* self)
 	self->monsterinfo.probLtng = 5;
 	self->monsterinfo.probDark = 0;
 	self->monsterinfo.probExplsn = 3;
+
+	self->monsterinfo.commonLoot[0] = LOOT_BUFFER;
+	self->monsterinfo.commonLoot[1] = 0;
+	self->monsterinfo.commonLoot[2] = 0;
+
+	self->monsterinfo.rareLoot[0] = LOOT_DOKAANOMITE;
+	self->monsterinfo.rareLoot[1] = LOOT_MAD_HALFER;
+	self->monsterinfo.rareLoot[2] = 0;
 	//David end
 
 	self->mass = 400;

@@ -924,6 +924,98 @@ extern void M_PickElement(edict_t* self);
 void TestElmPick(edict_t* ent) {
 	M_PickElement(ent->client->foe);
 }
+
+void ToggleLuck(edict_t* self) {
+	if (!self->client)
+		return;
+	self->client->lucky = (self->client->lucky + 1) % 2;
+}
+
+void UseLoot1(edict_t* self) { //Medkit
+	if (!self->client || self->health <= 0 || !self->client->foe)
+		return;
+	if (self->client->loot[0] < 1)
+		return;
+	self->health = min(self->health + 80, self->max_health);
+	T_Damage(self, self, self, vec3_origin, vec3_origin, vec3_origin, 0, 0, DAMAGE_NO_KNOCKBACK, 0);
+	self->client->loot[0] -= 1;
+	Com_Printf("Used a Medkit. Regained 80 health!\n");
+	self->client->ps.stats[STAT_ITEMQUANT1] = self->client->loot[0];
+}
+void UseLoot2(edict_t* self) { //Buffer
+	if (!self->client || self->health <= 0 || !self->client->foe)
+		return;
+	if (self->client->loot[1] < 1)
+		return;
+	if (self->client->buffed) {
+		Com_Printf("Buffer cannot be used multiple times.\n");
+		return;
+	}
+	if (self->client->bolstered) {
+		Com_Printf("Buffer is incompatible with Bolsterer.\n");
+		return;
+	}
+	self->client->buffed = 1;
+	self->client->loot[1] -= 1;
+	Com_Printf("Used a Buffer. Next attack will deal x1.5 damage!\n");
+	self->client->ps.stats[STAT_ITEMQUANT2] = self->client->loot[1];
+}
+void UseLoot3(edict_t* self) { //Bolsterer
+	if (!self->client || self->health <= 0 || !self->client->foe)
+		return;
+	if (self->client->loot[2] < 1)
+		return;
+	if (self->client->buffed) {
+		Com_Printf("Bolsterer is incompatible with Buffer.\n");
+		return;
+	}
+	self->client->bolstered += 1;
+	self->client->loot[2] -= 1;
+	Com_Printf("Used a Bolsterer. Next spell used will gain x%i experience!\n", self->client->bolstered * 2);
+	self->client->ps.stats[STAT_ITEMQUANT3] = self->client->loot[2];
+}
+void UseLoot4(edict_t* self) { //Mad Halfer
+	if (!self->client || self->health <= 0 || !self->client->foe)
+		return;
+	if (self->client->loot[3] < 1)
+		return;
+	self->client->foe->health = max(1, self->client->foe->health / 2);
+	T_Damage(self, self, self, vec3_origin, vec3_origin, vec3_origin, self->health / 2, 0, DAMAGE_NO_KNOCKBACK, 0);
+	self->client->loot[3] -= 1;
+	Com_Printf("Used a MAD Halfer. Both fighters lost half their health!");
+	self->client->ps.stats[STAT_ITEMQUANT4] = self->client->loot[3];
+}
+void UseLoot5(edict_t* self) { //Dokaanomite
+	if (!self->client || self->health <= 0 || !self->client->foe)
+		return;
+	if (self->client->loot[4] < 1)
+		return;
+	self->client->foe->health = 0;
+	Com_Printf("Used a stick of Dokaanomite! The enemy was blown to hell!");
+	Victory(self);
+	self->client->loot[4] -= 1;
+	self->client->ps.stats[STAT_ITEMQUANT5] = self->client->loot[4];
+}
+void Stock_Up(edict_t* self) {
+	if (!self->client)
+		return;
+	for (int i = 0; i < 5; i++)
+		self->client->loot[i] = self->client->maxLoot[i];
+	self->client->ps.stats[STAT_ITEMQUANT1] = self->client->loot[0];
+	self->client->ps.stats[STAT_ITEMQUANT2] = self->client->loot[1];
+	self->client->ps.stats[STAT_ITEMQUANT3] = self->client->loot[2];
+	self->client->ps.stats[STAT_ITEMQUANT4] = self->client->loot[3];
+	self->client->ps.stats[STAT_ITEMQUANT5] = self->client->loot[4];
+}
+
+void ToggleHelp(edict_t* self) {
+	if (!self->client)
+		return;
+	if (self->client->ps.stats[STAT_HELP] == 0)
+		self->client->ps.stats[STAT_HELP] = 1;
+	else
+		self->client->ps.stats[STAT_HELP] = 0;
+}
 //David End
 
 
@@ -970,48 +1062,48 @@ void ClientCommand (edict_t *ent)
 	if (level.intermissiontime)
 		return;
 
-	if (Q_stricmp (cmd, "use") == 0)
-		Cmd_Use_f (ent);
-	else if (Q_stricmp (cmd, "drop") == 0)
-		Cmd_Drop_f (ent);
-	else if (Q_stricmp (cmd, "give") == 0)
-		Cmd_Give_f (ent);
-	else if (Q_stricmp (cmd, "god") == 0)
-		Cmd_God_f (ent);
-	else if (Q_stricmp (cmd, "notarget") == 0)
-		Cmd_Notarget_f (ent);
-	else if (Q_stricmp (cmd, "noclip") == 0)
-		Cmd_Noclip_f (ent);
-	else if (Q_stricmp (cmd, "inven") == 0)
-		Cmd_Inven_f (ent);
-	else if (Q_stricmp (cmd, "invnext") == 0)
-		SelectNextItem (ent, -1);
-	else if (Q_stricmp (cmd, "invprev") == 0)
-		SelectPrevItem (ent, -1);
-	else if (Q_stricmp (cmd, "invnextw") == 0)
-		SelectNextItem (ent, IT_WEAPON);
-	else if (Q_stricmp (cmd, "invprevw") == 0)
-		SelectPrevItem (ent, IT_WEAPON);
-	else if (Q_stricmp (cmd, "invnextp") == 0)
-		SelectNextItem (ent, IT_POWERUP);
-	else if (Q_stricmp (cmd, "invprevp") == 0)
-		SelectPrevItem (ent, IT_POWERUP);
-	else if (Q_stricmp (cmd, "invuse") == 0)
-		Cmd_InvUse_f (ent);
-	else if (Q_stricmp (cmd, "invdrop") == 0)
-		Cmd_InvDrop_f (ent);
-	else if (Q_stricmp (cmd, "weapprev") == 0)
-		Cmd_WeapPrev_f (ent);
-	else if (Q_stricmp (cmd, "weapnext") == 0)
-		Cmd_WeapNext_f (ent);
-	else if (Q_stricmp (cmd, "weaplast") == 0)
-		Cmd_WeapLast_f (ent);
-	else if (Q_stricmp (cmd, "kill") == 0)
-		Cmd_Kill_f (ent);
-	else if (Q_stricmp (cmd, "putaway") == 0)
-		Cmd_PutAway_f (ent);
-	else if (Q_stricmp (cmd, "wave") == 0)
-		Cmd_Wave_f (ent);
+	if (Q_stricmp(cmd, "use") == 0)
+		Cmd_Use_f(ent);
+	else if (Q_stricmp(cmd, "drop") == 0)
+		Cmd_Drop_f(ent);
+	else if (Q_stricmp(cmd, "give") == 0)
+		Cmd_Give_f(ent);
+	else if (Q_stricmp(cmd, "god") == 0)
+		Cmd_God_f(ent);
+	else if (Q_stricmp(cmd, "notarget") == 0)
+		Cmd_Notarget_f(ent);
+	else if (Q_stricmp(cmd, "noclip") == 0)
+		Cmd_Noclip_f(ent);
+	else if (Q_stricmp(cmd, "inven") == 0)
+		Cmd_Inven_f(ent);
+	else if (Q_stricmp(cmd, "invnext") == 0)
+		SelectNextItem(ent, -1);
+	else if (Q_stricmp(cmd, "invprev") == 0)
+		SelectPrevItem(ent, -1);
+	else if (Q_stricmp(cmd, "invnextw") == 0)
+		SelectNextItem(ent, IT_WEAPON);
+	else if (Q_stricmp(cmd, "invprevw") == 0)
+		SelectPrevItem(ent, IT_WEAPON);
+	else if (Q_stricmp(cmd, "invnextp") == 0)
+		SelectNextItem(ent, IT_POWERUP);
+	else if (Q_stricmp(cmd, "invprevp") == 0)
+		SelectPrevItem(ent, IT_POWERUP);
+	else if (Q_stricmp(cmd, "invuse") == 0)
+		Cmd_InvUse_f(ent);
+	else if (Q_stricmp(cmd, "invdrop") == 0)
+		Cmd_InvDrop_f(ent);
+	else if (Q_stricmp(cmd, "weapprev") == 0)
+		Cmd_WeapPrev_f(ent);
+	else if (Q_stricmp(cmd, "weapnext") == 0)
+		Cmd_WeapNext_f(ent);
+	else if (Q_stricmp(cmd, "weaplast") == 0)
+		Cmd_WeapLast_f(ent);
+	else if (Q_stricmp(cmd, "kill") == 0)
+		Cmd_Kill_f(ent);
+	else if (Q_stricmp(cmd, "putaway") == 0)
+		Cmd_PutAway_f(ent);
+	else if (Q_stricmp(cmd, "wave") == 0)
+		Cmd_Wave_f(ent);
 	else if (Q_stricmp(cmd, "playerlist") == 0)
 		Cmd_PlayerList_f(ent);
 	//David Begin
@@ -1022,7 +1114,7 @@ void ClientCommand (edict_t *ent)
 	else if (Q_stricmp(cmd, "newfoe_hard") == 0)
 		NewFoe_hd(ent);
 	else if (Q_stricmp(cmd, "p_fire") == 0) {
-		Com_Printf("Chose fire!\n");
+		//Com_Printf("Chose fire!\n");
 		PickMove(ent, 1);
 	}
 	else if (Q_stricmp(cmd, "p_ice") == 0)
@@ -1034,7 +1126,23 @@ void ClientCommand (edict_t *ent)
 	else if (Q_stricmp(cmd, "p_explosion") == 0)
 		PickMove(ent, 5);
 	else if (Q_stricmp(cmd, "test_monster") == 0)
-		TestElmPick(ent);	
+		TestElmPick(ent);
+	else if (Q_stricmp(cmd, "i1") == 0)
+		UseLoot1(ent);
+	else if (Q_stricmp(cmd, "i2") == 0)
+		UseLoot2(ent);
+	else if (Q_stricmp(cmd, "i3") == 0)
+		UseLoot3(ent);
+	else if (Q_stricmp(cmd, "i4") == 0)
+		UseLoot4(ent);
+	else if (Q_stricmp(cmd, "i5") == 0)
+		UseLoot5(ent);
+	else if (Q_stricmp(cmd, "luck") == 0)
+		ToggleLuck(ent);
+	else if (Q_stricmp(cmd, "stockup") == 0)
+		Stock_Up(ent);
+	else if (Q_stricmp(cmd, "tgl_help") == 0)
+		ToggleHelp(ent);
 	//David end
 	else	// anything that doesn't match a command will be a chat
 		Cmd_Say_f (ent, false, true);

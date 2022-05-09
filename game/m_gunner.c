@@ -706,6 +706,14 @@ void SP_monster_gunner2(edict_t* self)
 	self->monsterinfo.probLtng = 3;
 	self->monsterinfo.probDark = 0;
 	self->monsterinfo.probExplsn = 4;
+
+	self->monsterinfo.commonLoot[0] = LOOT_MEDKIT;
+	self->monsterinfo.commonLoot[1] = 0;
+	self->monsterinfo.commonLoot[2] = 0;
+
+	self->monsterinfo.rareLoot[0] = LOOT_BOLSTERER;
+	self->monsterinfo.rareLoot[1] = LOOT_MEDKIT;
+	self->monsterinfo.rareLoot[2] = 0;
 	//David end
 
 	self->mass = 200;

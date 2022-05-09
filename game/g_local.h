@@ -449,10 +449,16 @@ typedef struct
 	//David Begin
 	int probPool, probFire, probIce, probLtng, probDark, probExplsn;	//Elemental Probablilities; pool is total, rest are chance out of total.
 	int xpMult;
+	int commonLoot[3]; //Array of loot dropped 30% of the time.
+	int rareLoot[3]; //Array of loot dropped 5% of the time.
 	//David End
 } monsterinfo_t;
 
-
+#define LOOT_MEDKIT 1
+#define LOOT_BUFFER 2
+#define LOOT_BOLSTERER 3
+#define LOOT_MAD_HALFER 4
+#define LOOT_DOKAANOMITE 5
 
 extern	game_locals_t	game;
 extern	level_locals_t	level;
@@ -709,7 +715,8 @@ void M_PickElement(edict_t* self);
 void M_HitEachOther(edict_t* self, edict_t* foe);
 void M_TickStatus(edict_t* self, edict_t* foe);
 int Elm_Damage(int element, int level);
-void Atk_FX(int element, int level, int damage, edict_t* user, edict_t* target);
+void Atk_FX1(int element, int level, int damage, edict_t* user, edict_t* target, char* un, char* tn);
+void Atk_FX2(int element, int level, int damage, edict_t* user, edict_t* target, char* un, char* tn);
 //David End
 
 //
@@ -989,6 +996,10 @@ struct gclient_s
 	edict_t* foe;	//Current enemy the player is against
 	int elementXP[5];
 	int inited;
+	int loot[5]; //Quantity of each item held
+	int maxLoot[5]; //Max holdable quantity of each item
+	int buffed, bolstered;
+	int lucky;
 	int victories;
 	//David end
 };

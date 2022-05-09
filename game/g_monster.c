@@ -755,7 +755,7 @@ void M_HitEachOther(edict_t* self, edict_t* foe) {
 	};
 	if (!self || !foe)
 		return;
-	Com_Printf("Getting ready to attack...\n");
+	//Com_Printf("Getting ready to attack...\n");
 	
 	M_PickElement(self);
 	int playerElmLvl = 0, monsterElmLvl = 0;
@@ -812,9 +812,22 @@ void M_HitEachOther(edict_t* self, edict_t* foe) {
 	dmg2player *= dmgMultChart[self->chosenElem][foe->chosenElem];
 	for (int i = 0; i < foe->redDmg; i++)
 		dmg2player *= 0.75f;
-	self->health -= dmg2monster;
+	int miracles = 0;
+	if (self->blessing && dmg2monster >= self->health) {
+		self->blessing = 0;
+		self->health = self->max_health * 0.05f;
+		miracles += 1;
+	}
+	else
+		self->health -= dmg2monster;
 	//T_Damage(self, foe, foe, vec3_origin, vec3_origin, vec3_origin, dmg2monster, 0, DAMAGE_NO_KNOCKBACK, 49 + foe->chosenElem);
-	if (self->health > 0)
+	if (self->health > 0 && foe->blessing && dmg2player >= foe->health) {
+		foe->blessing = 0;
+		foe->health = foe->max_health;
+		T_Damage(foe, self, self, vec3_origin, vec3_origin, vec3_origin, foe->max_health / 2, 0, DAMAGE_NO_KNOCKBACK, 49 + self->chosenElem);
+		miracles += 2;
+	}
+	else if (self->health > 0)
 		T_Damage(foe, self, self, vec3_origin, vec3_origin, vec3_origin, dmg2player, 0, DAMAGE_NO_KNOCKBACK, 49 + self->chosenElem);
 	if (self->chosenElem > 0 && foe->chosenElem > 0) {
 		if (dmgMultChart[foe->chosenElem][self->chosenElem] == eff) {
@@ -832,11 +845,16 @@ void M_HitEachOther(edict_t* self, edict_t* foe) {
 	}
 	if (dmg2monster > 0)
 		Com_Printf("Player deals %i %s damage to the monster.\n", dmg2monster, playerElm);
+	if (miracles >= 2) {
+		Com_Printf("The monster miraculously survived!\n");
+		miracles -= 2;
+	}
 	if (dmg2player > 0)
 		Com_Printf("The monster deals %i %s damage to the player.\n", dmg2player, monsterElm);
-
-	Atk_FX(foe->chosenElem, playerElmLvl, dmg2monster, foe, self);
-	Atk_FX(self->chosenElem, monsterElmLvl, dmg2player, self, foe);
+	if (miracles == 1)
+		Com_Printf("The player miraculously survived!\n");
+	Atk_FX2(foe->chosenElem, playerElmLvl, dmg2monster, foe, self, "player","monster");
+	Atk_FX2(self->chosenElem, monsterElmLvl, dmg2player, self, foe,"monster","player");
 
 	M_TickStatus(self, foe);
 
@@ -848,19 +866,27 @@ void M_TickStatus(edict_t* self, edict_t* foe) {
 	if (foe->health > 0) {
 		if (foe->dot) {
 			int dmg = foe->max_health / 20;
-			foe->health -= dmg;
 			if (foe->redDmg) {
 				for (int i = 0; i < foe->redDmg; i++)
 					dmg *= 0.75f;
 			}
 			Com_Printf("Player takes %i damage from being on fire.\n",dmg);
+			if (foe->blessing) {
+				foe->blessing = 0;
+				foe->health = foe->max_health;
+				T_Damage(foe, self, self, vec3_origin, vec3_origin, vec3_origin, foe->health / 2, 0, DAMAGE_NO_KNOCKBACK, MOD_C_FIRE);
+				Com_Printf("The player miraculously survived!\n");
+			}
+			else
+				T_Damage(foe, self, self, vec3_origin, vec3_origin, vec3_origin, dmg, 0, DAMAGE_NO_KNOCKBACK, MOD_C_FIRE);
 			foe->dot--;
 			if (!foe->dot)
 				Com_Printf("Player is no longer on fire.\n");
 		}
 		if (foe->stun) {
-			foe->stun = 0;
-			Com_Printf("Player is no longer stunned!\n");
+			foe->stun--;
+			if (!foe->stun)
+				Com_Printf("Player is no longer stunned!\n");
 		}
 		if (foe->frozen) {
 			foe->frozen--;
@@ -880,23 +906,32 @@ void M_TickStatus(edict_t* self, edict_t* foe) {
 			if (!foe->blind)
 				Com_Printf("Player can see clearly again!\n");
 		}
+		foe->client->buffed = 0;
+		foe->client->bolstered = 0;
 	}
 	if (self->health > 0) {
 		if (self->dot) {
 			int dmg = self->max_health / 20;
-			self->health -= dmg;
 			if (self->redDmg) {
 				for (int i = 0; i < self->redDmg; i++)
 					dmg *= 0.75f;
 			}
 			Com_Printf("Enemy takes %i damage from being on fire.\n", dmg);
+			if (self->blessing) {
+				self->blessing = 0;
+				self->health = self->max_health * 0.05f;
+				Com_Printf("The monster miraculously survived!\n");
+			}
+			else
+				self->health -= dmg;
 			self->dot--;
 			if (!self->dot)
 				Com_Printf("Enemy is no longer on fire.\n");
 		}
 		if (self->stun) {
-			self->stun = 0;
-			Com_Printf("Enemy is no longer stunned!\n");
+			self->stun--;
+			if(!self->stun)
+				Com_Printf("Enemy is no longer stunned!\n");
 		}
 		if (self->frozen) {
 			self->frozen--;
@@ -954,7 +989,7 @@ void M_PickElement(edict_t* self) {
 	else if (choice < modifiedProbs[4])
 		elmChoice = ELM_EXPLOSION;
 	self->chosenElem = elmChoice;
-	Com_Printf("Got number %f, chose element %i.\n", choice, elmChoice);
+	//Com_Printf("Got number %f, chose element %i.\n", choice, elmChoice);
 }
 int Elm_Damage(int element, int level) {
 	switch (element) {
@@ -1097,8 +1132,38 @@ int Elm_Damage(int element, int level) {
 		return 0;
 	}
 }
-void Atk_FX(int element, int level, int damage, edict_t* user, edict_t* target) {
-	if (level < 3 || !user || !target)
+void Atk_FX1(int element, int level, int damage, edict_t* user, edict_t* target, char* un, char* tn) {
+	if (level < 3 || !user || user->health <= 0 || !target)
+		return;
+	switch (element) {
+	case 1: {
+		if (level == 5) {
+			int healing = user->max_health * 0.03f;
+			user->health += healing;
+			if (user->health > user->max_health)
+				user->health = user->max_health;
+			Com_Printf("The %s cauterized their wounds.\n", un);
+		}
+		break;
+	}
+	case 2: {
+		user->redDmg += 1;
+		break;
+	}
+	case 3: {
+		if (level == 5) {
+			float odd = random();
+			if (odd < 0.15f) {
+				user->blessing = 2;
+				Com_Printf("The %s has received a blessing!\n", un);
+			}
+		}
+		break;
+	}
+	}
+}
+void Atk_FX2(int element, int level, int damage, edict_t* user, edict_t* target, char* un, char* tn) {
+	if (level < 3 || !user || user->health <= 0 || !target)
 		return;
 	switch (element) {
 	case 1: {
@@ -1106,64 +1171,68 @@ void Atk_FX(int element, int level, int damage, edict_t* user, edict_t* target) 
 		if (odd < 0.5f) {
 			int rounds = floorf(random() * 3) + 3;
 			target->dot += rounds;
+			Com_Printf("The %s has been lit on fire!\n", tn);
 		}
-		if (level == 5) {
-			int healing = user->max_health * 0.03f;
-			user->health += healing;
-			if (user->health > user->max_health)
-				user->health = user->max_health;
-		}
+		break;
 	}
 	case 2: {
-		user->redDmg += 1;
 		if (level == 5) {
 			float odd = random();
 			if (odd < 0.35f) {
 				int rounds = floorf(random() * 2) + 2;
 				target->frozen += rounds;
+				Com_Printf("The %s has been frozen!\n", tn);
 			}
 		}
+		break;
 	}
 	case 3: {
 
 		float odd = random();
-		if (odd < 0.5f)
-			target->stun = 1;
-		if (level == 5) {
-			odd = random();
-			if (odd < 0.15f)
-				user->blessing = 2;
+		if (odd < 0.5f) {
+			Com_Printf("The %s has been stunned!\n", tn);
+			target->stun = 2;
 		}
+		break;
 	}
 	case 4: {
 		int healing = damage * 0.4f;
 		user->health += healing;
 		if (user->health > user->max_health)
 			user->health = user->max_health;
+		Com_Printf("The %s leeched some health!\n", un);
 
 		if (level == 5) {
 			float odd = random();
 			if (odd < 0.03f) {
-				target->health = 0;
+				Com_Printf("The %s has been instakilled!\n", tn);
 				if (target->blessing) {
 					target->blessing = 0;
 					target->health = target->max_health * 0.05f;
+					Com_Printf("The %s miraculously survived!\n", tn);
 				}
+				else
+					target->health = 0;
 			}
 		}
+		break;
 	}
 	case 5: {
 
 		float odd = random();
-		if (odd < 0.5f)
-			target->stun = 1;
+		if (odd < 0.5f) {
+			Com_Printf("The %s has been stunned!\n", tn);
+			target->stun = 2;
+		}
 		if (level == 5) {
 			odd = random();
 			if (odd < 0.6f) {
 				int rounds = floorf(random() * 3) + 3;
 				target->blind += rounds;
+				Com_Printf("The %s has been blinded!\n", tn);
 			}
 		}
+		break;
 	}
 	}
 }

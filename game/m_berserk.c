@@ -459,6 +459,14 @@ void SP_monster_berserk (edict_t *self)
 	self->monsterinfo.probLtng = 0;
 	self->monsterinfo.probDark = 3;
 	self->monsterinfo.probExplsn = 3;
+
+	self->monsterinfo.commonLoot[0] = LOOT_MEDKIT;
+	self->monsterinfo.commonLoot[1] = LOOT_MEDKIT;
+	self->monsterinfo.commonLoot[2] = 0;
+
+	self->monsterinfo.rareLoot[0] = LOOT_DOKAANOMITE;
+	self->monsterinfo.rareLoot[1] = LOOT_MEDKIT;
+	self->monsterinfo.rareLoot[2] = 0;
 	//David end
 
 	self->mass = 250;

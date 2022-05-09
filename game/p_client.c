@@ -1835,32 +1835,78 @@ extern void M_HitEachOther(edict_t* self, edict_t* foe);
 void C_PickElement(edict_t* self, int elm) {
 	if (!self || !self->client || !self->client->foe)
 		return;
-	Com_Printf("Picking an element...\n");
+	//Com_Printf("Picking an element...\n");
 	self->chosenElem = elm;
-	Com_Printf("Checking for inaction/accuracy statuses...\n");
+	//Com_Printf("Checking for inaction/accuracy statuses...\n");
 	if (self->stun || self->frozen) {
 		self->chosenElem = 0;
 	}
 	else if (self->blind) {
-		Com_Printf("Applying accuracy modifier...\n");
+		//Com_Printf("Applying accuracy modifier...\n");
 		float odd = random();
 		if (odd < 0.5f) {
 			self->chosenElem = 0;
 		}
 	}
-	Com_Printf("Applying EXP gain...\n");
+	//Com_Printf("Applying EXP gain...\n");
 	if (self->chosenElem > 0)
 		self->client->elementXP[elm - 1] += self->client->foe->monsterinfo.xpMult;
 	M_HitEachOther(self->client->foe, self);
-	if (self->client->foe->health <= 0)
+	if (self->health > 0 && self->client->foe->health <= 0) {
+		Com_Printf("Player wins!!\n");
 		Victory(self);
+	}
+	else if (self->health <= 0)
+		Com_Printf("Player has been killed!!\n");
 }
 void Victory(edict_t* self) {
 	self->client->victories += 1;
 	if (self->chosenElem > 0)
 		self->client->elementXP[self->chosenElem - 1] += self->client->foe->monsterinfo.xpMult * 10;
+	int lootTable[] = { 0,0,0 };
+	float pool = random() * 20;
+	if (self->client->lucky)
+		pool = random() * 7;
+	if (pool < 1) {
+		lootTable[0] = self->client->foe->monsterinfo.rareLoot[0];
+		lootTable[1] = self->client->foe->monsterinfo.rareLoot[1];
+		lootTable[2] = self->client->foe->monsterinfo.rareLoot[2];
+	}
+	else if (pool < 7) {
+		lootTable[0] = self->client->foe->monsterinfo.commonLoot[0];
+		lootTable[1] = self->client->foe->monsterinfo.commonLoot[1];
+		lootTable[2] = self->client->foe->monsterinfo.commonLoot[2];
+	}
 	G_FreeEdict(self->client->foe);
 	self->client->foe = 0;
+
+	for (int i = 0; i < 3; i++) {
+		if (lootTable[i] == 0)
+			break;
+		char* itemName = "dummy";
+		if (self->client->loot[lootTable[i]-1] < self->client->maxLoot[lootTable[i]-1]) {
+			self->client->loot[lootTable[i]-1] += 1;
+			switch (lootTable[i]) {
+			case 1:
+				itemName = "Medkit";
+				break;
+			case 2:
+				itemName = "Buffer";
+				break;
+			case 3:
+				itemName = "Bolsterer";
+				break;
+			case 4:
+				itemName = "MAD Halfer";
+				break;
+			case 5:
+				itemName = "Dokaanomite";
+				break;
+			}
+		}
+		Com_Printf("%s obtained!\n", itemName);
+	}
+
 	int oldlevel = self->lvlFire;
 	self->lvlFire = LevelUp(self->client->elementXP[0]);
 	if (self->lvlFire > oldlevel)
@@ -1881,21 +1927,33 @@ void Victory(edict_t* self) {
 	self->lvlExplosion = LevelUp(self->client->elementXP[4]);
 	if (self->lvlExplosion > oldlevel)
 		Com_Printf("Your Explosion spell has improved!\n");
+
+	self->client->ps.stats[STAT_FIRELEVEL] = self->lvlFire;
+	self->client->ps.stats[STAT_ICELEVEL] = self->lvlIce;
+	self->client->ps.stats[STAT_LIGHTNINGLEVEL] = self->lvlLightning;
+	self->client->ps.stats[STAT_DARKLEVEL] = self->lvlDark;
+	self->client->ps.stats[STAT_EXPLOSIONLEVEL] = self->lvlExplosion;
+
+	self->client->ps.stats[STAT_ITEMQUANT1] = self->client->loot[0];
+	self->client->ps.stats[STAT_ITEMQUANT2] = self->client->loot[1];
+	self->client->ps.stats[STAT_ITEMQUANT3] = self->client->loot[2];
+	self->client->ps.stats[STAT_ITEMQUANT4] = self->client->loot[3];
+	self->client->ps.stats[STAT_ITEMQUANT5] = self->client->loot[4];
 }
 int LevelUp(int exp) {
-	if (exp >= 300)
+	if (exp >= 200)
 		return 5;
-	if (exp >= 180)
+	if (exp >= 120)
 		return 4;
-	if (exp >= 100)
-		return 3;
 	if (exp >= 40)
+		return 3;
+	if (exp >= 10)
 		return 2;
 	return 1;
 }
 void SpawnFoe(edict_t *self, int difficulty) {
 	if (self->client->inited == 0) {
-		Com_Printf("Inintializing player variables...\n");
+		//Com_Printf("Inintializing player variables...\n");
 		self->lvlFire = 1;
 		self->lvlIce = 1;
 		self->lvlLightning = 1;
@@ -1907,9 +1965,29 @@ void SpawnFoe(edict_t *self, int difficulty) {
 		self->client->elementXP[2] = 0;
 		self->client->elementXP[3] = 0;
 		self->client->elementXP[4] = 0;
+		self->client->maxLoot[0] = 8;
+		self->client->maxLoot[1] = 4;
+		self->client->maxLoot[2] = 5;
+		self->client->maxLoot[3] = 4;
+		self->client->maxLoot[4] = 2;
+		self->client->loot[0] = 2;
+		self->client->loot[1] = 1;
+		self->client->loot[2] = 1;
+		self->client->loot[3] = 0;
+		self->client->loot[4] = 0;
+		self->client->lucky = 0;
 		self->client->inited = 1;
+		self->client->ps.stats[STAT_FIRELEVEL] = 1;
+		self->client->ps.stats[STAT_ICELEVEL] = 1;
+		self->client->ps.stats[STAT_LIGHTNINGLEVEL] = 1;
+		self->client->ps.stats[STAT_DARKLEVEL] = 1;
+		self->client->ps.stats[STAT_EXPLOSIONLEVEL] = 1;
+		self->client->ps.stats[STAT_ITEMQUANT1] = 2;
+		self->client->ps.stats[STAT_ITEMQUANT2] = 1;
+		self->client->ps.stats[STAT_ITEMQUANT3] = 1;
+		self->client->ps.stats[STAT_HELP] = 0;
 	}
-	Com_Printf("Attempting to spawn a foe...\n");
+	//Com_Printf("Attempting to spawn a foe...\n");
 	if (!self->client)
 		return;
 	if (self->client->foe) {
@@ -1926,6 +2004,7 @@ void SpawnFoe(edict_t *self, int difficulty) {
 	self->stun = 0;
 	self->redDmg = 0;
 	self->frozen = 0;
+	self->client->bolstered = 0;
 
 	self->client->foe = G_Spawn();
 	vec3_t selfOrigin;

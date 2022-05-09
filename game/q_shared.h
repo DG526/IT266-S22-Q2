@@ -1009,6 +1009,21 @@ typedef enum
 #define STAT_CHASE				16
 #define STAT_SPECTATOR			17
 
+//David begin
+#define STAT_FIRELEVEL			20
+#define STAT_ICELEVEL			21
+#define STAT_LIGHTNINGLEVEL		22
+#define STAT_DARKLEVEL			23
+#define STAT_EXPLOSIONLEVEL		24
+
+#define STAT_ITEMQUANT1			25
+#define STAT_ITEMQUANT2			26
+#define STAT_ITEMQUANT3			27
+#define STAT_ITEMQUANT4			28
+#define STAT_ITEMQUANT5			29
+#define STAT_HELP				30
+//David end
+
 #define	MAX_STATS				32
 
 
